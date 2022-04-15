@@ -91,11 +91,14 @@ def write_file_to_s3(output: dict, token: str) -> None:
 
 def slack_message(device_id: str) -> None:
     url: str = "https://hooks.slack.com/services/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"
-    requests.post(
-        url,
-        headers={"Content-Type": "application/json"},
-        json={"text": f"Schedule for device {device_id} was sent"},
-    )
+    try:
+        requests.post(
+            url,
+            headers={"Content-Type": "application/json"},
+            json={"text": f"Schedule for device {device_id} was sent"},
+        )
+    except Exception as e:
+        logging.error(e)
 
 
 def get_secret():
@@ -153,6 +156,7 @@ def lambda_handler(event, context):
 
     date_utc: str = convert_date_to_utc(request_body["startAt"], timezone)
 
+    # add random number in the last interval element
     random_interval: list = request_body["interval"]
     random_interval[-1] = random_interval[-1] + random.randint(1, 600)
 
@@ -167,7 +171,7 @@ def lambda_handler(event, context):
     secret = get_secret()
     write_file_to_s3(response_body, json.loads(secret)["fakeToken"])
 
-    # slack_message(request_body["devId"])
+    slack_message(request_body["devId"])
 
     return {
         "statusCode": 200,
